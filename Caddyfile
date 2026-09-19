@@ -1,0 +1,20 @@
+# แก้ไข belt-check.hongsa-mining.example.com เป็นโดเมนจริงของโครงการ
+# Caddy จะขอและต่ออายุใบรับรอง TLS จาก Let's Encrypt ให้อัตโนมัติ (บังคับ HTTPS)
+belt-check.hongsa-mining.example.com {
+    reverse_proxy frontend:80
+
+    header {
+        Strict-Transport-Security "max-age=31536000; includeSubDomains"
+        X-Content-Type-Options "nosniff"
+        X-Frame-Options "DENY"
+        Referrer-Policy "strict-origin-when-cross-origin"
+    }
+
+    encode gzip
+}
+
+# ทางเลือก: ถ้ายังไม่มีโดเมน/ใบรับรองสาธารณะ ใช้ internal CA ชั่วคราวสำหรับทดสอบใน LAN
+# :443 {
+#     tls internal
+#     reverse_proxy frontend:80
+# }

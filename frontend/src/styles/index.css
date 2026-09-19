@@ -1,0 +1,14 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html, body, #root {
+  height: 100%;
+}
+
+/* ปุ่มขนาดใหญ่สำหรับ Operator กด Pass/Fail/N-A กลางแดด ต้องมองเห็นชัด แตะง่ายด้วยถุงมือ */
+.big-tap-target {
+  min-height: 72px;
+  font-size: 1.35rem;
+  font-weight: 700;
+}

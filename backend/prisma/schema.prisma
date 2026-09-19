@@ -1,0 +1,258 @@
+// Hongsa Belt Inspection System — Prisma schema (PostgreSQL)
+// ไม่มีค่า secret ใด ๆ ฝังในไฟล์นี้ — connection string มาจาก env DATABASE_URL เท่านั้น
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  operator
+  engineer
+  admin
+}
+
+enum UserStatus {
+  active
+  suspended
+}
+
+enum ResultValue {
+  pass
+  fail
+  na
+}
+
+enum InspectionStatus {
+  in_progress
+  submitted
+  offline_pending
+  synced
+}
+
+enum SyncSource {
+  web
+  offline_sync
+}
+
+enum ChecklistInputType {
+  pass_fail_na
+  numeric
+}
+
+enum ChecklistCategory {
+  drive_unit_1
+  drive_unit_2
+  drive_unit_3
+  drive_unit_4
+  belt_cleaner_primary
+  belt_cleaner_secondary
+  impact_carry_return
+  chute_dust
+  belt_condition
+  pulley_primary
+  pulley_secondary
+  pulley_takeup
+  pulley_tail
+  crossbar_spillage
+}
+
+enum NotificationType {
+  critical_fail
+  threshold_exceeded
+}
+
+enum NotificationChannel {
+  email
+  line
+}
+
+enum NotificationStatus {
+  pending
+  sent
+  failed
+}
+
+enum AuditAction {
+  login_success
+  login_failed
+  logout
+  pin_change
+  pin_reset
+  user_create
+  user_update
+  user_suspend
+  geofence_update
+  geofence_check
+  inspection_start
+  inspection_submit
+  inspection_sync
+  export_download
+}
+
+model User {
+  id            String     @id @default(uuid())
+  employeeCode  String     @unique @map("employee_code")
+  fullName      String     @map("full_name")
+  pinHash       String     @map("pin_hash")
+  role          UserRole
+  status        UserStatus @default(active)
+  email         String?
+  lineUserId    String?    @map("line_user_id")
+  tokenVersion  Int        @default(0) @map("token_version") // bump เพื่อ revoke ทุก refresh token เดิม
+  createdAt     DateTime   @default(now()) @map("created_at")
+  updatedAt     DateTime   @updatedAt @map("updated_at")
+  lastLoginAt   DateTime?  @map("last_login_at")
+
+  inspections       Inspection[]
+  auditLogs         AuditLog[]
+  updatedGeofences  Geofence[]
+
+  @@map("users")
+}
+
+model BeltHead {
+  id        String   @id @default(uuid())
+  code      String   @unique // S2C, S2B, S2A, S2, S3, S5, B1, B2, B3, C1, C2
+  name      String
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  geofence     Geofence?
+  inspections  Inspection[]
+
+  @@map("belt_heads")
+}
+
+model Geofence {
+  id          String   @id @default(uuid())
+  beltHeadId  String   @unique @map("belt_head_id")
+  beltHead    BeltHead @relation(fields: [beltHeadId], references: [id], onDelete: Cascade)
+  latitude    Decimal  @db.Decimal(10, 7)
+  longitude   Decimal  @db.Decimal(10, 7)
+  radiusM     Int      @default(50) @map("radius_m")
+  updatedById String?  @map("updated_by_id")
+  updatedBy   User?    @relation(fields: [updatedById], references: [id])
+  updatedAt   DateTime @updatedAt @map("updated_at")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@map("geofences")
+}
+
+model ChecklistItemDef {
+  id             String              @id @default(uuid())
+  code           String              @unique // e.g. DRIVE_1_OIL, DRIVE_1_VISUAL, BELT_CLEANER_PRIMARY
+  category       ChecklistCategory
+  labelTh        String              @map("label_th")
+  labelEn        String              @map("label_en")
+  inputType      ChecklistInputType  @map("input_type")
+  unit           String?
+  thresholdMin   Decimal?            @db.Decimal(10, 3) @map("threshold_min")
+  thresholdMax   Decimal?            @db.Decimal(10, 3) @map("threshold_max")
+  sortOrder      Int                 @default(0) @map("sort_order")
+  active         Boolean             @default(true)
+  createdAt      DateTime            @default(now()) @map("created_at")
+  updatedAt      DateTime            @updatedAt @map("updated_at")
+
+  results InspectionResult[]
+
+  @@map("checklist_item_defs")
+}
+
+model Inspection {
+  id                     String            @id @default(uuid())
+  beltHeadId             String            @map("belt_head_id")
+  beltHead               BeltHead          @relation(fields: [beltHeadId], references: [id])
+  operatorId             String            @map("operator_id")
+  operator               User              @relation(fields: [operatorId], references: [id])
+  shiftName              String?           @map("shift_name") // day | night
+  startedAt              DateTime          @default(now()) @map("started_at")
+  submittedAt            DateTime?         @map("submitted_at")
+  clientSubmittedAt      DateTime?         @map("client_submitted_at")
+  checkInLat             Decimal           @db.Decimal(10, 7) @map("check_in_lat")
+  checkInLng             Decimal           @db.Decimal(10, 7) @map("check_in_lng")
+  checkInAccuracyM       Decimal           @db.Decimal(6, 2) @map("check_in_accuracy_m")
+  geofenceCheckPassed    Boolean           @map("geofence_check_passed")
+  geofenceDistanceM      Decimal           @db.Decimal(8, 2) @map("geofence_distance_m")
+  status                 InspectionStatus  @default(in_progress)
+  syncSource             SyncSource        @default(web) @map("sync_source")
+  deviceId               String?           @map("device_id")
+  idempotencyKey         String?           @unique @map("idempotency_key")
+  createdAt              DateTime          @default(now()) @map("created_at")
+
+  results InspectionResult[]
+
+  @@index([beltHeadId, createdAt])
+  @@index([operatorId, createdAt])
+  @@map("inspections")
+}
+
+model InspectionResult {
+  id                 String       @id @default(uuid())
+  inspectionId       String       @map("inspection_id")
+  inspection         Inspection   @relation(fields: [inspectionId], references: [id], onDelete: Cascade)
+  checklistItemId    String       @map("checklist_item_id")
+  checklistItem      ChecklistItemDef @relation(fields: [checklistItemId], references: [id])
+  resultValue        ResultValue? @map("result_value")
+  numericValue        Decimal?     @db.Decimal(10, 3) @map("numeric_value")
+  thresholdBreached  Boolean      @default(false) @map("threshold_breached")
+  noteText           String?      @map("note_text")
+  voiceTranscript    String?      @map("voice_transcript")
+  createdAt          DateTime     @default(now()) @map("created_at")
+
+  photos InspectionPhoto[]
+
+  @@unique([inspectionId, checklistItemId])
+  @@map("inspection_results")
+}
+
+model InspectionPhoto {
+  id                   String            @id @default(uuid())
+  inspectionResultId   String            @map("inspection_result_id")
+  inspectionResult     InspectionResult  @relation(fields: [inspectionResultId], references: [id], onDelete: Cascade)
+  objectKey            String            @map("object_key") // MinIO path
+  highlightX            Float?            @map("highlight_x") // 0..1 relative
+  highlightY            Float?            @map("highlight_y")
+  highlightRadius       Float?            @map("highlight_radius") // 0..1 relative
+  capturedAt           DateTime?         @map("captured_at")
+  uploadedAt           DateTime          @default(now()) @map("uploaded_at")
+
+  @@map("inspection_photos")
+}
+
+model Notification {
+  id                   String              @id @default(uuid())
+  type                 NotificationType
+  channel              NotificationChannel
+  recipient            String
+  payload              Json
+  status               NotificationStatus  @default(pending)
+  errorMessage         String?             @map("error_message")
+  sentAt               DateTime?           @map("sent_at")
+  relatedInspectionId  String?             @map("related_inspection_id")
+  createdAt            DateTime            @default(now()) @map("created_at")
+
+  @@map("notifications")
+}
+
+model AuditLog {
+  id           String       @id @default(uuid())
+  actorUserId  String?      @map("actor_user_id")
+  actor        User?        @relation(fields: [actorUserId], references: [id])
+  action       AuditAction
+  targetType   String?      @map("target_type")
+  targetId     String?      @map("target_id")
+  ipAddress    String?      @map("ip_address")
+  userAgent    String?      @map("user_agent")
+  metadata     Json?
+  createdAt    DateTime     @default(now()) @map("created_at")
+
+  @@index([actorUserId, createdAt])
+  @@index([action, createdAt])
+  @@map("audit_logs")
+}
