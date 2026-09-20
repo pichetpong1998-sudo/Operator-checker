@@ -1,0 +1,110 @@
+# Render Blueprint — Hongsa Belt Inspection System
+# วิธีใช้: Render Dashboard → New → Blueprint → เลือก repo นี้ → Render อ่านไฟล์นี้และสร้างทุก service ให้อัตโนมัติ
+# ขั้นตอนละเอียดทั้งหมด (รวมบัญชี Cloudflare R2 สำหรับเก็บรูป) อยู่ใน docs/RENDER_DEPLOY.md
+
+databases:
+  - name: hongsa-belt-db
+    databaseName: belt_check_db
+    user: belt_check_app
+    plan: free # โหมดทดลองฟรี — ข้อควรรู้: หมดอายุใน 30 วัน แล้วลบข้อมูลทิ้งทั้งหมด ถ้าจะใช้งานจริงต้องอัปเกรดเป็น 0.1c-256mb (~$6/เดือน) ก่อนครบ 30 วัน
+    region: singapore
+    ipAllowList: [] # เข้าถึงได้เฉพาะจาก service ภายใน workspace นี้เท่านั้น ปลอดภัยกว่าเปิดสู่อินเทอร์เน็ต
+
+services:
+  # Redis — ใช้เฉพาะ rate-limiting (ข้อมูลชั่วคราว ไม่ใช่แหล่งข้อมูลหลักของระบบ) จึงใช้ free tier ได้อย่างปลอดภัย
+  - type: keyvalue
+    name: hongsa-belt-redis
+    plan: free
+    region: singapore
+    ipAllowList: []
+    maxmemoryPolicy: allkeys-lru
+
+  # Backend API — Node.js + Express + Prisma ตาม backend/Dockerfile เดิม ไม่ต้องแก้โค้ดใดๆ
+  - type: web
+    name: hongsa-belt-backend
+    runtime: docker
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+    region: singapore
+    plan: free # โหมดทดลองฟรี — ข้อควรรู้: จะ sleep เมื่อไม่มีคนใช้ 15 นาที (โหลดใหม่ใช้เวลา ~1 นาที) และส่งอีเมลแจ้งเตือนไม่ได้ (free block พอร์ต SMTP) ถ้าจะใช้งานจริงต้องอัปเกรดเป็น 0.5c-512mb (~$7/เดือน)
+    healthCheckPath: /healthz
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 4000
+      - key: DATABASE_URL
+        fromDatabase:
+          name: hongsa-belt-db
+          property: connectionString
+      - key: JWT_ACCESS_SECRET
+        generateValue: true # Render สุ่มค่าให้เองแบบปลอดภัย ไม่มีใครเห็นค่านี้รวมถึงผม
+      - key: JWT_REFRESH_SECRET
+        generateValue: true
+      - key: JWT_ACCESS_TTL
+        value: 15m
+      - key: JWT_REFRESH_TTL
+        value: 30d
+      - key: REDIS_URL
+        fromService:
+          name: hongsa-belt-redis
+          type: keyvalue
+          property: connectionString
+      - key: MAX_GPS_ACCURACY_M
+        value: 35
+      - key: PREFLIGHT_TOKEN_TTL_MIN
+        value: 10
+      # ใช้สร้างข้อมูลเริ่มต้น (หัวสายพาน/checklist/user ทดสอบ) ผ่าน URL เดียว โดยไม่ต้องมี Shell access (จำเป็นบน plan free)
+      # วิธีใช้: ดู docs/RENDER_DEPLOY.md ข้อ 5
+      - key: BOOTSTRAP_TOKEN
+        generateValue: true
+      # เก็บรูปถ่าย — ใช้ Cloudflare R2 (S3-compatible, ฟรี 10GB แรก) แทนการ self-host MinIO
+      # ต้องกรอกค่าจริงเองใน Render Dashboard หลัง deploy ครั้งแรก (ดูขั้นตอนใน docs/RENDER_DEPLOY.md ข้อ 2)
+      - key: MINIO_ENDPOINT
+        sync: false
+      - key: MINIO_PORT
+        value: 443
+      - key: MINIO_USE_SSL
+        value: true
+      - key: MINIO_ACCESS_KEY
+        sync: false
+      - key: MINIO_SECRET_KEY
+        sync: false
+      - key: MINIO_BUCKET
+        value: belt-inspection-photos
+      # แจ้งเตือน Email — ไม่บังคับ เว้นว่างได้ถ้ายังไม่พร้อมตั้งค่า (ดูขั้นตอนใน docs/RENDER_DEPLOY.md ข้อ 3)
+      - key: SMTP_HOST
+        sync: false
+      - key: SMTP_PORT
+        value: 587
+      - key: SMTP_USER
+        sync: false
+      - key: SMTP_PASS
+        sync: false
+      - key: SMTP_FROM
+        sync: false
+      - key: ALERT_EMAIL_RECIPIENTS
+        sync: false
+      # แจ้งเตือน LINE — ไม่บังคับ เว้นว่างได้เช่นกัน
+      - key: LINE_CHANNEL_ACCESS_TOKEN
+        sync: false
+      - key: LINE_ALERT_GROUP_ID
+        sync: false
+      - key: CORS_ORIGIN
+        value: "https://hongsa-belt-frontend.onrender.com"
+
+  # Frontend — React PWA โฮสต์เป็น Static Site (เร็ว, ฟรี, มี CDN ในตัว)
+  # /api/* ถูก rewrite ไปที่ backend service แบบ server-side ผู้ใช้ไม่เห็นความต่างของโดเมน
+  - type: web
+    name: hongsa-belt-frontend
+    runtime: static
+    rootDir: frontend
+    buildCommand: npm install && npm run build
+    staticPublishPath: ./dist
+    routes:
+      - type: rewrite
+        source: /api/*
+        destination: https://hongsa-belt-backend.onrender.com/api/*
+      - type: rewrite
+        source: /*
+        destination: /index.html
