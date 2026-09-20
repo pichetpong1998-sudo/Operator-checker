@@ -267,9 +267,8 @@ export default function ChecklistPage() {
                     value={draft.numericValue ?? ""}
                     onChange={(e) => updateDraft(item.id, { numericValue: e.target.value === "" ? undefined : Number(e.target.value) })}
                     className="flex-1 rounded-lg bg-slate-800 border border-slate-700 px-4 py-3 text-lg"
-                    placeholder={`กรอกค่า${item.unit ? ` (${item.unit})` : ""}`}
+                    placeholder="กรอกค่า"
                   />
-                  {item.unit && <span className="text-slate-400">{item.unit}</span>}
                 </div>
               )}
 
