@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import { apiFetch } from "../api/client";
 import NavBar from "../components/NavBar";
 
@@ -97,8 +98,15 @@ export default function EngineerDashboard() {
         ) : (
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             {statuses.map((s) => (
-              <div key={s.beltHeadCode} className={`rounded-xl border-2 p-4 ${STATUS_STYLE[s.status]}`}>
-                <p className="text-lg font-bold">{s.beltHeadCode}</p>
+              <Link
+                key={s.beltHeadCode}
+                to={`/dashboard/belt/${s.beltHeadCode}`}
+                className={`rounded-xl border-2 p-4 block transition hover:scale-[1.02] hover:brightness-110 cursor-pointer ${STATUS_STYLE[s.status]}`}
+              >
+                <div className="flex items-center justify-between">
+                  <p className="text-lg font-bold">{s.beltHeadCode}</p>
+                  <span className="text-xs opacity-60">ดูรายละเอียด →</span>
+                </div>
                 <p className="text-sm font-semibold">{STATUS_LABEL[s.status]}</p>
                 {s.lastInspectionAt && (
                   <p className="text-xs mt-2 opacity-80">
@@ -106,7 +114,7 @@ export default function EngineerDashboard() {
                     {s.lastOperator && <> โดย {s.lastOperator}</>}
                   </p>
                 )}
-              </div>
+              </Link>
             ))}
           </div>
         )}

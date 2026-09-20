@@ -4,6 +4,7 @@ import Login from "./pages/Login";
 import OperatorHome from "./pages/OperatorHome";
 import ChecklistPage from "./pages/ChecklistPage";
 import EngineerDashboard from "./pages/EngineerDashboard";
+import BeltHeadDetail from "./pages/BeltHeadDetail";
 import AdminUsers from "./pages/AdminUsers";
 import AdminGeofences from "./pages/AdminGeofences";
 import AdminAudit from "./pages/AdminAudit";
@@ -60,6 +61,15 @@ export default function App() {
         element={
           <RequireRole roles={["engineer", "admin"]}>
             <EngineerDashboard />
+          </RequireRole>
+        }
+      />
+
+      <Route
+        path="/dashboard/belt/:code"
+        element={
+          <RequireRole roles={["engineer", "admin"]}>
+            <BeltHeadDetail />
           </RequireRole>
         }
       />
