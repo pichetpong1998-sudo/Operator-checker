@@ -21,8 +21,10 @@ const envSchema = z.object({
   MINIO_ENDPOINT: z.string().default("localhost"),
   MINIO_PORT: z.coerce.number().default(9000),
   MINIO_USE_SSL: z.coerce.boolean().default(false),
-  MINIO_ACCESS_KEY: z.string().min(1, "MINIO_ACCESS_KEY is required"),
-  MINIO_SECRET_KEY: z.string().min(1, "MINIO_SECRET_KEY is required"),
+  // ถ้ายังไม่ตั้งค่า (เช่นช่วงทดลองระบบก่อนตั้ง Cloudflare R2/MinIO จริง) ระบบยัง boot ได้ปกติ
+  // แค่ฟีเจอร์อัปโหลดรูปจะ error เฉพาะตอนมีคนกดอัปโหลดจริงเท่านั้น ไม่กระทบส่วนอื่น
+  MINIO_ACCESS_KEY: z.string().default("not-configured"),
+  MINIO_SECRET_KEY: z.string().default("not-configured"),
   MINIO_BUCKET: z.string().default("belt-inspection-photos"),
 
   SMTP_HOST: z.string().optional(),
