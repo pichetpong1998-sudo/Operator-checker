@@ -2,7 +2,10 @@
 // ไม่มีค่า secret ใด ๆ ฝังในไฟล์นี้ — connection string มาจาก env DATABASE_URL เท่านั้น
 
 generator client {
-  provider = "prisma-client-js"
+  provider      = "prisma-client-js"
+  // ระบุ engine ให้ตรงกับ Alpine Linux (musl) ที่ใช้ใน Docker image โดยตรง
+  // ไม่งั้น prisma generate อาจไม่ได้ generate engine binary ที่ใช้งานได้จริงตอน runtime บน Render
+  binaryTargets = ["native", "linux-musl-openssl-3.0.x"]
 }
 
 datasource db {
