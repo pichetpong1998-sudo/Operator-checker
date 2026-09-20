@@ -16,6 +16,7 @@ import { auditRouter } from "./routes/audit";
 import { bootstrapRouter } from "./routes/bootstrap";
 import { importOperatorsRouter } from "./routes/importOperators";
 import { seedTestInspectionsRouter } from "./routes/seedTestInspections";
+import { dailyShiftReportRouter } from "./routes/dailyShiftReport";
 import { errorHandler, notFoundHandler } from "./middleware/errorHandler";
 import { generalApiRateLimiter } from "./middleware/rateLimit";
 
@@ -46,6 +47,7 @@ export function createApp() {
   app.use("/api/v1/uploads", uploadsRouter);
   app.use("/api/v1/dashboard", dashboardRouter);
   app.use("/api/v1/exports", exportsRouter);
+  app.use("/api/v1/exports", dailyShiftReportRouter);
   app.use("/api/v1/audit-logs", auditRouter);
   app.use("/api/v1/bootstrap", bootstrapRouter);
   app.use("/api/v1/admin-import/operators", importOperatorsRouter);

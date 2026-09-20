@@ -66,6 +66,19 @@ export default function EngineerDashboard() {
     URL.revokeObjectURL(url);
   }
 
+  async function printDailyShiftReport() {
+    const res = await fetch(`/api/v1/exports/daily-shift-report.pdf`, {
+      headers: { Authorization: `Bearer ${sessionStorage.getItem("belt_check_access_token")}` },
+    });
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `daily-shift-report.pdf`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
   return (
     <div className="min-h-screen bg-slate-950">
       <NavBar />
@@ -73,6 +86,9 @@ export default function EngineerDashboard() {
         <div className="flex items-center justify-between">
           <h1 className="text-xl font-bold">Dashboard สถานะหัวสายพาน</h1>
           <div className="flex gap-2">
+            <button onClick={printDailyShiftReport} className="rounded-lg bg-teal-700 px-3 py-2 text-sm font-semibold">
+              รายงานประจำวัน (พิมพ์)
+            </button>
             <button onClick={() => exportFile("xlsx")} className="rounded-lg bg-slate-800 px-3 py-2 text-sm">
               Export Excel
             </button>

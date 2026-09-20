@@ -22,6 +22,7 @@ COPY --from=build /app/dist ./dist
 COPY --from=build /app/prisma ./prisma
 COPY --from=build /app/node_modules/.prisma ./node_modules/.prisma
 COPY --from=build /app/node_modules/@prisma ./node_modules/@prisma
+COPY --from=build /app/assets ./assets
 
 EXPOSE 4000
 # ใช้ non-root user เพื่อความปลอดภัย — chown ให้ appuser เป็นเจ้าของทั้งหมด
