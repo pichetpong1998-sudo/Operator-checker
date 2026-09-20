@@ -6,6 +6,7 @@ import ChecklistPage from "./pages/ChecklistPage";
 import EngineerDashboard from "./pages/EngineerDashboard";
 import BeltHeadDetail from "./pages/BeltHeadDetail";
 import AdminUsers from "./pages/AdminUsers";
+import AdminChecklistItems from "./pages/AdminChecklistItems";
 import AdminGeofences from "./pages/AdminGeofences";
 import AdminAudit from "./pages/AdminAudit";
 import type { UserRole } from "./types";
@@ -79,6 +80,14 @@ export default function App() {
         element={
           <RequireRole roles={["admin"]}>
             <AdminUsers />
+          </RequireRole>
+        }
+      />
+      <Route
+        path="/admin/checklist-items"
+        element={
+          <RequireRole roles={["admin"]}>
+            <AdminChecklistItems />
           </RequireRole>
         }
       />

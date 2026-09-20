@@ -8,6 +8,7 @@ export default function NavBar() {
   const links = [
     { to: "/dashboard", label: "Dashboard", roles: ["engineer", "admin"] },
     { to: "/admin/users", label: "ผู้ใช้งาน", roles: ["admin"] },
+    { to: "/admin/checklist-items", label: "รายการตรวจเช็ค", roles: ["admin"] },
     { to: "/admin/geofences", label: "พิกัด/Geofence", roles: ["admin"] },
     { to: "/admin/audit", label: "Audit Log", roles: ["admin"] },
   ];
