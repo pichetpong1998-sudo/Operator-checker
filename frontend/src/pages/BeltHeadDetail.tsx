@@ -19,7 +19,9 @@ interface InspectionResultRow {
   resultValue: "pass" | "fail" | "na" | null;
   numericValue: string | null;
   thresholdBreached: boolean;
+  noteText: string | null;
   checklistItem: ChecklistItemDef;
+  photos: { id: string }[];
 }
 
 interface InspectionRow {
@@ -88,6 +90,15 @@ export default function BeltHeadDetail() {
   }, [inspections]);
 
   const numericItems = items.filter((i) => i.inputType === "numeric");
+
+  async function viewPhoto(photoId: string) {
+    try {
+      const { url } = await apiFetch<{ url: string }>(`/uploads/photos/${photoId}/view-url`);
+      window.open(url, "_blank", "noopener,noreferrer");
+    } catch {
+      alert("เปิดรูปไม่สำเร็จ (อาจยังไม่ได้ตั้งค่าระบบเก็บรูปภาพ)");
+    }
+  }
 
   return (
     <div className="min-h-screen bg-slate-950">
@@ -209,7 +220,7 @@ export default function BeltHeadDetail() {
                       <th className="px-3 py-2 font-medium">เวลา</th>
                       <th className="px-3 py-2 font-medium">ผู้ตรวจ</th>
                       <th className="px-3 py-2 font-medium">สถานะ</th>
-                      <th className="px-3 py-2 font-medium">Fail / Warning</th>
+                      <th className="px-3 py-2 font-medium">Fail / Warning — รายละเอียด</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -226,8 +237,35 @@ export default function BeltHeadDetail() {
                               {STATUS_LABEL[s]}
                             </span>
                           </td>
-                          <td className="px-3 py-2 text-xs text-slate-400">
-                            {[...failItems, ...warnItems].map((r) => r.checklistItem.labelTh).join(", ") || "—"}
+                          <td className="px-3 py-2 text-xs">
+                            {[...failItems, ...warnItems].length === 0 ? (
+                              <span className="text-slate-400">—</span>
+                            ) : (
+                              <div className="space-y-1.5">
+                                {[...failItems, ...warnItems].map((r) => (
+                                  <div key={r.id} className="flex items-start gap-2">
+                                    <span
+                                      className={`shrink-0 rounded px-1.5 py-0.5 font-semibold ${
+                                        r.resultValue === "fail"
+                                          ? "bg-red-900/40 text-red-300"
+                                          : "bg-amber-900/40 text-amber-300"
+                                      }`}
+                                    >
+                                      {r.checklistItem.labelTh}
+                                    </span>
+                                    {r.noteText && <span className="text-slate-300">{r.noteText}</span>}
+                                    {r.photos.length > 0 && (
+                                      <button
+                                        onClick={() => viewPhoto(r.photos[0].id)}
+                                        className="shrink-0 text-teal-400 underline"
+                                      >
+                                        ดูรูป{r.photos.length > 1 ? ` (${r.photos.length})` : ""}
+                                      </button>
+                                    )}
+                                  </div>
+                                ))}
+                              </div>
+                            )}
                           </td>
                         </tr>
                       );
