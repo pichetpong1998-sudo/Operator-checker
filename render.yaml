@@ -58,6 +58,9 @@ services:
       # วิธีใช้: ดู docs/RENDER_DEPLOY.md ข้อ 5
       - key: BOOTSTRAP_TOKEN
         generateValue: true
+      # นำเข้ารายชื่อพนักงาน Operator ชุดแรก (41 คน) แบบครั้งเดียวผ่าน URL — ปลอดภัยเรียกซ้ำได้ (upsert-only)
+      - key: IMPORT_TOKEN
+        generateValue: true
       # เก็บรูปถ่าย — ใช้ Cloudflare R2 (S3-compatible, ฟรี 10GB แรก) แทนการ self-host MinIO
       # ต้องกรอกค่าจริงเองใน Render Dashboard หลัง deploy ครั้งแรก (ดูขั้นตอนใน docs/RENDER_DEPLOY.md ข้อ 2)
       - key: MINIO_ENDPOINT

@@ -14,6 +14,7 @@ import { dashboardRouter } from "./routes/dashboard";
 import { exportsRouter } from "./routes/exports";
 import { auditRouter } from "./routes/audit";
 import { bootstrapRouter } from "./routes/bootstrap";
+import { importOperatorsRouter } from "./routes/importOperators";
 import { errorHandler, notFoundHandler } from "./middleware/errorHandler";
 import { generalApiRateLimiter } from "./middleware/rateLimit";
 
@@ -46,6 +47,7 @@ export function createApp() {
   app.use("/api/v1/exports", exportsRouter);
   app.use("/api/v1/audit-logs", auditRouter);
   app.use("/api/v1/bootstrap", bootstrapRouter);
+  app.use("/api/v1/admin-import/operators", importOperatorsRouter);
 
   app.use(notFoundHandler);
   app.use(errorHandler);
